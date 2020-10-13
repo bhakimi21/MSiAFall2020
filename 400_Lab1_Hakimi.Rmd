@@ -1,0 +1,183 @@
+---
+title: "Hakimi_400Lab1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Please make sure these libraries are loaded
+```{r}
+library(tidyverse)
+library(data.table)
+
+```
+
+Make sure the web data is in your working directory
+```{r Problem 1 Load}
+
+web.dt <- fread("webtraffic.txt")
+
+```
+
+
+Problem #1
+a)
+```{r 1a}
+traffic <- matrix(colSums(web.dt), nrow = 9, ncol = 9, byrow = TRUE)
+
+colnames(traffic) <- 1:9
+rownames(traffic) <- 1:9
+traffic[9,1] <- 1000
+print(traffic)
+
+```
+b)
+The Markov Chain is both irreducable and egrodic because all states "communicate"
+with each other in some chain and becuase
+
+c)
+```{r 1c}
+P <- traffic/rowSums(traffic)
+print(P)
+```
+d)
+```{r 1d}
+init <- c(1, rep(0,8))
+prob5 <- P %*% P %*% P %*% P %*% P
+print(prob5[1,5])
+
+```
+e)
+```{r 1e}
+library(expm)
+ssprobmat <- P %^% 10000000
+print(ssprobmat[1,])
+
+```
+
+f)
+```{r 1f} 
+ident = diag(9)
+Q <- ident[c(1:8), c(1:8)]- P[c(1:8), c(1:8)]
+Qin <- solve(Q)
+mins <- c(0.1,2,3,5,5,3,3,2)
+ans <- Qin %*% mins
+print('Avg. time spent on site (MINUTES):')
+print(ans[1])
+
+```
+
+Problem 2
+
+a)
+``` {r 2a}
+lam1 = 1
+lam2 = 2
+lam3 = 4
+
+var_px = 1/lam1^2
+tolerance = 1 * 10^-3
+delta = 1 - .99
+n1 = var_px/(tolerance^2 * delta) 
+
+var_px = 1/lam2^2
+tolerance = 1 * 10^-3
+delta = 1 - .99
+n2 = var_px/(tolerance^2 * delta) 
+
+var_px = 1/lam3^2
+tolerance = 1 * 10^-3
+delta = 1 - .99
+n3 = var_px/(tolerance^2 * delta) 
+
+print('Samples needed for lambda = 1') 
+print(n1)
+print('Samples needed for lambda = 2') 
+print(n2)
+print('Samples needed for lambda = 4') 
+print(n3)
+
+```
+
+b)
+``` {r 2b}
+# lambda 1
+X = runif(n1, 0,1)
+Y = -log(X)/lam1
+g = sin(Y)/lam1
+print('Estimation with Lambda 1')
+print(sum(g)/n1)
+print('Actual Value with Lambda 1')
+print(1/(1+lam1^2))
+
+# lambda 2
+X = runif(n2, 0,1)
+Y = -log(X)/lam2
+g = sin(Y)/lam2
+print('Estimation with Lambda 2')
+print(sum(g)/n2)
+print('Actual Value with Lambda 2')
+print(1/(1+lam2^2))
+
+# lambda 3
+X = runif(n3, 0,1)
+Y = -log(X)/lam3
+g = sin(Y)/lam3
+print('Estimation with Lambda 3')
+print(sum(g)/n3)
+print('Actual Value with Lambda 3')
+print(1/(1+lam3^2))
+
+```
+All values are within the 1*10^-3 error margin thanks to the number of samples
+
+
+Problem 3
+
+a)
+Metropolis-Hastings is best suited for this problem. 
+
+b)
+```{r 3b}
+q = function(x){
+  return(rexp(1, rate = x))
+}
+
+p = function(x){
+  return(dgamma(x, shape = 1, rate = 1))
+}
+
+
+x = rep(0,15000)
+x[1] = 3     #initialize; I've set arbitrarily set this to 3
+for(i in 2:15000){
+  current_x = seq(i-1)
+  proposed_x = q(current_x)
+  A = min(1,(p(proposed_x) * q(current_x)) / (p(current_x) * q(proposed_x)))
+  if(runif(1)<=A){
+    x[i] = proposed_x       # accept move with probabily min(1,A)
+  } else {
+    x[i] = current_x        # otherwise "reject" move, and stay where we are
+  }
+}
+
+
+hist(x, breaks = 10, prob = TRUE)
+curve(dgamma(x, shape = 2, scale = 2), add=TRUE,col="red")
+
+
+```
+
+c)
+```{r 3c}
+
+plot(x)
+
+```
+Yes this graph shows that the points generated in part 3b
+are sufficuently random.
+

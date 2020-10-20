@@ -1,0 +1,606 @@
+---
+title: "LabAssign2"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Please make sure necessary libraries are installed
+``` {r load libs}
+
+library(tidyverse)
+library(data.table)
+library(caret)
+
+```
+
+Make sure data file and assignment are in same directory
+```{r load data}
+
+grad.dt <- fread("gradAdmit.csv")
+
+```
+
+Problem 1:
+
+Part a)
+
+Create full training and test sets
+
+```{r full train and test}
+
+# Create Complete Test and Training Sets
+set.seed(400)
+n <- nrow((grad.dt))
+
+nfolds <- 5
+
+foldsfull = createFolds(1:n, k=nfolds)
+for (i in 1:nfolds) {
+  fulltrain = grad.dt[-foldsfull[[i]],]
+  fulltest = grad.dt[foldsfull[[i]],]
+  # Train & analyze full model
+}
+
+```
+
+Create folds for the remaining 80% of data in training
+```{r folds}
+
+# Create Segments of training set
+set.seed(400)
+ntrain <- nrow((fulltrain))
+
+nfolds <- 5
+
+folds = createFolds(1:ntrain, k=nfolds)
+for (i in 1:nfolds) {
+  train = fulltrain[-folds[[i]],]
+  test = fulltrain[folds[[i]],]
+  # Train & analyze full model
+}
+
+
+```
+
+Set up data for cross validation
+```{r cross set up}
+
+# Identiify Val and Train 
+val1 <- fulltrain[folds[[1]],]
+train1 <- rbind(fulltrain[folds[[2]],],fulltrain[folds[[3]],],fulltrain[folds[[4]],],fulltrain[folds[[5]],])
+
+val2 <- fulltrain[folds[[2]],]
+train2 <- rbind(fulltrain[folds[[1]],],fulltrain[folds[[3]],],fulltrain[folds[[4]],],fulltrain[folds[[5]],])
+
+val3 <- fulltrain[folds[[3]],]
+train3 <- rbind(fulltrain[folds[[2]],],fulltrain[folds[[1]],],fulltrain[folds[[4]],],fulltrain[folds[[5]],])
+
+val4 <- fulltrain[folds[[4]],]
+train4 <- rbind(fulltrain[folds[[2]],],fulltrain[folds[[3]],],fulltrain[folds[[1]],],fulltrain[folds[[5]],])
+
+val5 <- fulltrain[folds[[5]],]
+train5 <- rbind(fulltrain[folds[[2]],],fulltrain[folds[[3]],],fulltrain[folds[[4]],],fulltrain[folds[[1]],])
+
+
+```
+
+Part b)
+
+Standard/Radial SVM
+``` {r radial}
+
+# Standard/Radial SVM
+radsvm <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+a1 <- radsvm(train1, val1)
+a2 <- radsvm(train2, val2)
+a3 <- radsvm(train3, val3)
+a4 <- radsvm(train4, val4)
+a5 <- radsvm(train5, val5)
+
+test1<- cbind(a1,a2,a3,a4,a5)
+print('Average accuracy accross folds: ')
+print(mean(test1))
+print('Standard Dev of fold accuracy: ')
+print(sd(test1))
+
+```
+
+
+Polynomial SVM Degree 3(default)
+``` {r poly}
+
+# Poly degree 5 SVM
+kernsvm <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 3)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+b1 <- kernsvm(train1, val1)
+b2 <- kernsvm(train2, val2)
+b3 <- kernsvm(train3, val3)
+b4 <- kernsvm(train4, val4)
+b5 <- kernsvm(train5, val5)
+
+test2<- cbind(b1,b2,b3,b4,b5)
+print('Average accuracy accross folds: ')
+print(mean(test2))
+print('Standard Dev of fold accuracy: ')
+print(sd(test2))
+
+```
+
+Linear SVM
+``` {r linear}
+
+# Linear SVM
+linsvm <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="linear")
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+c1 <- linsvm(train1,val1)
+c2 <- linsvm(train2,val2)
+c3 <- linsvm(train3,val3)
+c4 <- linsvm(train4,val4)
+c5 <- linsvm(train5,val5)
+
+test3<- cbind(c1,c2,c3,c4,c5)
+print('Average accuracy accross folds: ')
+print(mean(test3))
+print('Standard Dev of fold accuracy: ')
+print(sd(test3))
+```
+
+ELIMINATE LINEAR SVM b/c of large SD
+
+Try different variations of polynomial
+
+Degree = 5
+``` {r degree 5}
+
+# Poly degree 5 SVM
+kernsvm5 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 5)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+d1 <- kernsvm5(train1, val1)
+d2 <- kernsvm5(train2, val2)
+d3 <- kernsvm5(train3, val3)
+d4 <- kernsvm5(train4, val4)
+d5 <- kernsvm5(train5, val5)
+
+test4<- cbind(d1,d2,d3,d4,d5)
+print('Average accuracy accross folds: ')
+print(mean(test4))
+print('Standard Dev of fold accuracy: ')
+print(sd(test4))
+```
+
+Degree = 8
+``` {r degree 8}
+
+# Poly degree 8 SVM
+kernsvm8 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 8)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+e1 <- kernsvm8(train1, val1)
+e2 <- kernsvm8(train2, val2)
+e3 <- kernsvm8(train3, val3)
+e4 <- kernsvm8(train4, val4)
+e5 <- kernsvm8(train5, val5)
+
+test5<- cbind(e1,e2,e3,e4,e5)
+print('Average accuracy accross folds: ')
+print(mean(test5))
+print('Standard Dev of fold accuracy: ')
+print(sd(test5))
+```
+
+Degree = 2
+``` {r degree 2}
+
+# Poly degree 5 SVM
+kernsvm2 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 2)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+f1 <- kernsvm2(train1, val1)
+f2 <- kernsvm2(train2, val2)
+f3 <- kernsvm2(train3, val3)
+f4 <- kernsvm2(train4, val4)
+f5 <- kernsvm2(train5, val5)
+
+test6<- cbind(f1,f2,f3,f4,f5)
+print('Average accuracy accross folds: ')
+print(mean(test6))
+print('Standard Dev of fold accuracy: ')
+print(sd(test6))
+
+```
+
+Continue w/ Polynomial-Degree:5
+Best accuracy and smallest SD
+
+Try with different coef0's
+
+Coef0 = 3
+```{r coef0 - 3}
+
+kernsvm5.3 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 5, coef0 = 3)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+g1 <- kernsvm5.3(train1,val1)
+g2 <- kernsvm5.3(train2,val2)
+g3 <- kernsvm5.3(train3,val3)
+g4 <- kernsvm5.3(train4,val4)
+g5 <- kernsvm5.3(train5,val5)
+
+test7<- cbind(g1,g2,g3,g4,g5)
+print('Average accuracy accross folds: ')
+print(mean(test7))
+print('Standard Dev of fold accuracy: ')
+print(sd(test7))
+
+```
+
+Coef0 = .2
+```{r coef0 - .2}
+
+kernsvm5.2 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 5, coef0 = 0.2)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+h1 <- kernsvm5.2(train1,val1)
+h2 <- kernsvm5.2(train2,val2)
+h3 <- kernsvm5.2(train3,val3)
+h4 <- kernsvm5.2(train4,val4)
+h5 <- kernsvm5.2(train5,val5)
+
+test8<- cbind(h1,h2,h3,h4,h5)
+print('Average accuracy accross folds: ')
+print(mean(test8))
+print('Standard Dev of fold accuracy: ')
+print(sd(test8))
+
+```
+
+Coef0 = .5
+```{r coef0 - .5}
+
+kernsvm5.5 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 5, coef0 = 0.5)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+i1 <- kernsvm5.5(train1,val1)
+i2 <- kernsvm5.5(train2,val2)
+i3 <- kernsvm5.5(train3,val3)
+i4 <- kernsvm5.5(train4,val4)
+i5 <- kernsvm5.5(train5,val5)
+
+test9<- cbind(i1,i2,i3,i4,i5)
+print('Average accuracy accross folds: ')
+print(mean(test9))
+print('Standard Dev of fold accuracy: ')
+print(sd(test9))
+
+```
+
+Coef0 = -1
+```{r coef0 - -1}
+
+kernsvm5.1 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 5, coef0 = -1)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+j1 <- kernsvm5.1(train1,val1)
+j2 <- kernsvm5.1(train2,val2)
+j3 <- kernsvm5.1(train3,val3)
+j4 <- kernsvm5.1(train4,val4)
+j5 <- kernsvm5.1(train5,val5)
+
+test10<- cbind(j1,j2,j3,j4,j5)
+print('Average accuracy accross folds: ')
+print(mean(test10))
+print('Standard Dev of fold accuracy: ')
+print(sd(test10))
+
+```
+
+USE coef0 = .2
+Good acccuracy and small SD
+
+Test with different costs
+
+Polynomial w/ cost = 5
+```{r poly cost = 5}
+
+# Kernel degree 5, coef0 = 5 and cost 5 SVM
+kernsvm5.5.5 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 5, cost = 5, coef0 = 0.2)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+k1 <- kernsvm5.5.5(train1,val1)
+k2 <- kernsvm5.5.5(train2,val2)
+k3 <- kernsvm5.5.5(train3,val3)
+k4 <- kernsvm5.5.5(train4,val4)
+k5 <- kernsvm5.5.5(train5,val5)
+
+test11<- cbind(k1,k2,k3,k4,k5)
+print('Average accuracy accross folds: ')
+print(mean(test11))
+print('Standard Dev of fold accuracy: ')
+print(sd(test11))
+
+```
+
+Radial w/ cost = 5
+
+```{r rad cost = 5}
+
+# Radial w/ cost = 5
+radsvm5 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, cost = 5)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+l1 <- radsvm5(train1,val1)
+l2 <- radsvm5(train2,val2)
+l3 <- radsvm5(train3,val3)
+l4 <- radsvm5(train4,val4)
+l5 <- radsvm5(train5,val5)
+
+test12<- cbind(l1,l2,l3,l4,l5)
+
+print('Average accuracy accross folds: ')
+print(mean(test12))
+print('Standard Dev of fold accuracy: ')
+print(sd(test12))
+```
+
+Polynomial w/ cost = 3
+```{r poly cost = 3}
+
+# Kernel degree 5, coef0 = 3 and cost 5 SVM
+kernsvm5.5.3 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 5, cost = 3, coef0 = 0.2)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+m1 <- kernsvm5.5.3(train1,val1)
+m2 <- kernsvm5.5.3(train2,val2)
+m3 <- kernsvm5.5.3(train3,val3)
+m4 <- kernsvm5.5.3(train4,val4)
+m5 <- kernsvm5.5.3(train5,val5)
+
+test13<- cbind(m1,m2,m3,m4,m5)
+print('Average accuracy accross folds: ')
+print(mean(test13))
+print('Standard Dev of fold accuracy: ')
+print(sd(test13))
+
+```
+
+Radial w/ cost = 3
+```{r rad cost = 3}
+
+# Radial w/ cost = 3
+radsvm3 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, cost = 3)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+n1 <- radsvm3(train1,val1)
+n2 <- radsvm3(train2,val2)
+n3 <- radsvm3(train3,val3)
+n4 <- radsvm3(train4,val4)
+n5 <- radsvm3(train5,val5)
+
+test14<- cbind(n1,n2,n3,n4,n5)
+
+print('Average accuracy accross folds: ')
+print(mean(test14))
+print('Standard Dev of fold accuracy: ')
+print(sd(test14))
+
+```
+
+Polynomial w/ cost = 2
+```{r poly cost = 2}
+
+# Kernel degree 5, coef0 = 2 and cost 5 SVM
+kernsvm5.5.2 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, kernel="polynomial", degree = 5, cost = 2, coef0 = 0.2)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+o1 <- kernsvm5.5.2(train1,val1)
+o2 <- kernsvm5.5.2(train2,val2)
+o3 <- kernsvm5.5.2(train3,val3)
+o4 <- kernsvm5.5.2(train4,val4)
+o5 <- kernsvm5.5.2(train5,val5)
+
+test15<- cbind(o1,o2,o3,o4,o5)
+print('Average accuracy accross folds: ')
+print(mean(test15))
+print('Standard Dev of fold accuracy: ')
+print(sd(test15))
+
+```
+
+Radial w/ cost = 2
+```{r rad cost = 2}
+
+# Radial w/ cost = 2
+radsvm3 <-
+  function(train, val){
+    svm = svm(factor(admit)~., data=train, cost = 2)
+    summary(svm)
+    pred =predict(svm, newdata=val, type='response')
+    confuse <- table(pred, val$admit, dnn=c("Prediction", "Actual"))
+    accuracy <- (confuse[1,1]+confuse[2,2])/sum(confuse)
+    return(accuracy)
+  }
+
+p1 <- radsvm3(train1,val1)
+p2 <- radsvm3(train2,val2)
+p3 <- radsvm3(train3,val3)
+p4 <- radsvm3(train4,val4)
+p5 <- radsvm3(train5,val5)
+
+test16<- cbind(p1,p2,p3,p4,p5)
+
+print('Average accuracy accross folds: ')
+print(mean(test16))
+print('Standard Dev of fold accuracy: ')
+print(sd(test16))
+
+```
+
+In thier basic forms, the radial kernel had the best accuracy followed
+by the linear kernel, then polynomial. The SD's for these three test showed 
+that polynomial had the least variation, followed by radial, then linear. 
+
+Because polynomial had the lowest SD and radial had the best accuracy,
+I decided to drop testing on the linera kernel and move on with just
+poly and radial.
+
+I then moved on to testing polynomials woth different degrees and 
+coef0's. Through a few rounds of testing I saw that a combination of 
+degree = 5 and coef0 = 0.2 provided one of the best accuracies while 
+also minimizing SD.
+
+After finding a good polynomial to test, I tried different costs with both
+the radial model and the polynomial. After a few rounds of testing I found that
+the polynomial with cost = 2 had the best accuracy as well as a fairly small SD.
+(accuracy = .7125 : SD = .0342)
+Additionally, the cost that gave the best accuracy for radial SVM was cost = 3
+with an accuracy = .709 and the cost that gave the lowest SD = .034 was cost = 5.
+This cost gave an accuracy of .706.
+
+Based on all these tests I decided to run my full test using a polynomial
+w/ degree = 5, coef0 = 0.2 and cost = 2.
+
+Part 1c)
+
+Run on full training and test set.
+
+```{r full test}
+score <- kernsvm5.5.2(fulltrain,fulltest)
+print('The accuracy on the full data set is:')
+print(score)
+
+```
+
+Unfortunatlly, the SVM model that tested the best did not actually 
+perform well on the full data set. So, I decided to re-train and test
+the full data set using the radial SVM with a cost = 5. This did not
+have the highest accuracy of the radial SVM's but it did have the lowest
+SD which will hopefully give me a full accuracy close to its .706 predicted
+accuracy.
+
+```{r full test try 2}
+score2 <- radsvm5(fulltrain,fulltest)
+print('The accuracy on the full data set is:')
+print(score2)
+
+```
+
+The radial SVM with a cost = 5 provided an accuracy of 72.5% when trained on the
+full traing set and tested on the full test set. This is over 4 percentage points
+better than the baseline 68.25% accuracy of using the standard SVM function.
+
+
